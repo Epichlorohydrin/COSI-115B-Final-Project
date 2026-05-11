@@ -138,22 +138,8 @@ Main result files:
 - Pretrained conversational transformer
 - Automatically downloaded on first run
 
-## Training Methods
-
-| Method | Parameters | Use Case |
-|--------|-----------|----------|
-| **Full Fine-Tuning** | 100% trainable | Highest quality, most memory intensive |
-| **LoRA** | ~1% trainable | Efficient, nearly same quality as full FT |
-| **Prefix Tuning** | ~0.1% trainable | Most parameter-efficient, good for deployment |
-
 ## Requirements
 
 - Python 3.9+
 - GPU strongly recommended (for reasonable training times)
 - CUDA 11.8+ if using GPU locally
-
-## Support
-
-- For questions on the assignment, see the course syllabus or ask in office hours
-- For dataset issues, check [Hugging Face Datasets docs](https://huggingface.co/docs/datasets)
-- For Transformers/PEFT documentation, see [Hugging Face Model Hub](https://huggingface.co/docs/transformers)
