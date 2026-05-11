@@ -60,7 +60,7 @@ def load_model(method: str, allow_downloads: bool):
     else:
         base_name = _infer_base_model(ckpt)
         base = AutoModelForCausalLM.from_pretrained(
-            base_name, dtype=dtype, local_files_only=local_files_only
+            base_name, torch_dtype=dtype, local_files_only=local_files_only
         )
         model = PeftModel.from_pretrained(base, str(ckpt), local_files_only=local_files_only)
         source = f"{base_name} + adapter({ckpt})"
