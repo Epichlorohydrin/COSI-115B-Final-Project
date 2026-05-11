@@ -1,0 +1,5 @@
+method,num_fully_scored_rows,avg_helpfulness,avg_correctness,avg_fluency
+lora,20,4.550,4.550,4.550
+prefix,20,1.000,1.000,1.000
+tfidf,20,4.900,4.900,4.900
+zero_shot,20,1.400,1.400,1.400

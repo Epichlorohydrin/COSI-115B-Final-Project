@@ -1,0 +1,6 @@
+"query","response"
+"My internet is down, can you help?","I'm sorry to hear that. Have you tried restarting your router? If not, please restart it and tell me what the lights show."
+"I can't log into my account, it says invalid password","Please try resetting your password using the 'Forgot password' link. If that fails, contact support with your account email."
+"How do I return an item?","To return an item, go to Orders > Select the order > Choose Return. Follow the on-screen instructions and print the return label."
+"The app crashes when I open it","Try clearing the app cache and restarting your device. If the problem persists, please send a screenshot and app version."
+"Do you offer student discounts?","Yes — we offer a 10% student discount. Please upload a valid student ID at checkout or use code STUDENT10."
