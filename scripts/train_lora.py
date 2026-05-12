@@ -1,91 +1,74 @@
-"""Summarize filled human evaluation sheet into per-method averages."""
+"""LoRA fine-tuning script using PEFT.
 
-from __future__ import annotations
-
+Usage example:
+python scripts/train_lora.py --dataset bitext/Bitext-customer-support-llm-chatbot-training-dataset \
+  --output_dir outputs/lora --model microsoft/DialoGPT-large --num_train_epochs 1
+"""
 import argparse
-import csv
-from collections import defaultdict
-from pathlib import Path
+import os
+from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
+from datasets import load_dataset
+from peft import get_peft_model, LoraConfig, TaskType
+from transformers import DataCollatorForLanguageModeling
 
-
-def to_float(x: str):
-    x = (x or "").strip()
-    if not x:
-        return None
-    try:
-        return float(x)
-    except ValueError:
-        return None
+from utils import to_causal_lm_examples
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", default="outputs/eval/human_eval_sheet.csv")
-    parser.add_argument("--output", default="outputs/eval/human_eval_summary.csv")
+    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--model', type=str, default='microsoft/DialoGPT-large')
+    parser.add_argument('--output_dir', type=str, default='outputs/lora')
+    parser.add_argument('--per_device_train_batch_size', type=int, default=2)
+    parser.add_argument('--num_train_epochs', type=int, default=3)
+    parser.add_argument('--max_samples', type=int, default=None)
     args = parser.parse_args()
 
-    path = Path(args.input)
-    with path.open("r", encoding="utf-8", newline="") as f:
-        rows = list(csv.DictReader(f))
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(args.model)
+    model.config.pad_token_id = tokenizer.pad_token_id
 
-    bucket = defaultdict(lambda: {"h": [], "c": [], "f": [], "n": 0})
-    for r in rows:
-        m = r["method"]
-        overall = to_float(r.get("overall_1_5", ""))
-        h = to_float(r.get("helpfulness_1_5", ""))
-        c = to_float(r.get("correctness_1_5", ""))
-        fl = to_float(r.get("fluency_1_5", ""))
+    # Configure LoRA
+    peft_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        inference_mode=False,
+        r=8,
+        lora_alpha=32,
+        lora_dropout=0.1,
+    )
+    model = get_peft_model(model, peft_config)
 
-        # Fast mode: if only overall score is provided, reuse it.
-        if overall is not None:
-            if h is None:
-                h = overall
-            if c is None:
-                c = overall
-            if fl is None:
-                fl = overall
-        if h is not None:
-            bucket[m]["h"].append(h)
-        if c is not None:
-            bucket[m]["c"].append(c)
-        if fl is not None:
-            bucket[m]["f"].append(fl)
-        if h is not None and c is not None and fl is not None:
-            bucket[m]["n"] += 1
+    train_dataset = to_causal_lm_examples(
+        load_dataset(args.dataset, split='train'),
+        tokenizer=tokenizer,
+        max_length=512,
+        max_samples=args.max_samples,
+    )
 
-    out_rows = []
-    for method, d in sorted(bucket.items()):
-        avg_h = sum(d["h"]) / len(d["h"]) if d["h"] else None
-        avg_c = sum(d["c"]) / len(d["c"]) if d["c"] else None
-        avg_f = sum(d["f"]) / len(d["f"]) if d["f"] else None
-        out_rows.append(
-            {
-                "method": method,
-                "num_fully_scored_rows": d["n"],
-                "avg_helpfulness": "" if avg_h is None else f"{avg_h:.3f}",
-                "avg_correctness": "" if avg_c is None else f"{avg_c:.3f}",
-                "avg_fluency": "" if avg_f is None else f"{avg_f:.3f}",
-            }
-        )
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    out_path = Path(args.output)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=[
-                "method",
-                "num_fully_scored_rows",
-                "avg_helpfulness",
-                "avg_correctness",
-                "avg_fluency",
-            ],
-        )
-        writer.writeheader()
-        writer.writerows(out_rows)
+    training_args = TrainingArguments(
+        output_dir=args.output_dir,
+        per_device_train_batch_size=args.per_device_train_batch_size,
+        num_train_epochs=args.num_train_epochs,
+        logging_steps=50,
+        save_total_limit=2,
+        fp16=True if os.getenv('USE_FP16', '1') == '1' else False,
+    )
 
-    print(f"Wrote summary: {out_path}")
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        data_collator=data_collator,
+    )
+
+    trainer.train()
+    model.push_to_hub = False
+    model.save_pretrained(args.output_dir)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
