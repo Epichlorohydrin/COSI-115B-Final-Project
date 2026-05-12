@@ -30,8 +30,8 @@ python -m venv .venv
 ```
 
 **Activate venv:**
-- **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1`
-- **Windows (cmd):** `venv\Scripts\activate.bat`
+- **Windows (PowerShell):** `.\.venv\Scripts\Activate.ps1`
+- **Windows (cmd):** `.venv\Scripts\activate.bat`
 - **Linux/macOS:** `source .venv/bin/activate`
 
 ```bash
@@ -66,7 +66,7 @@ python scripts/chatbot_from_weights.py --method lora --allow-downloads
 Supported methods:
 - `--method lora` (Recommended: best efficiency/quality tradeoff)
 - `--method prefix` (Most parameter-efficient)
-- `--method full_finetune` (Full fine-tune; not recommended if training was unstable)
+- `--method full` (Full fine-tune; not recommended if training was unstable)
 
 **Non-interactive demo** (batch predictions on sample inputs):
 ```bash
