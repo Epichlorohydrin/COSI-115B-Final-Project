@@ -25,26 +25,27 @@ For local machines **with GPU**:
 
 ```bash
 python -m venv .venv
+```
 
-# Windows:
-.\\venv\\Scripts\\activate
+**Activate venv:**
+- **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1`
+- **Windows (cmd):** `venv\Scripts\activate.bat`
+- **Linux/macOS:** `source .venv/bin/activate`
 
-# Linux/macOS:
-source .venv/bin/activate
-
+```bash
 pip install -r requirements.txt
 
-# Full fine-tuning
+# Full fine-tuning (save into weights/full_finetune/checkpoint-1250 for inference)
 python scripts/train_full.py --dataset bitext/Bitext-customer-support-llm-chatbot-training-dataset \
-	--output_dir outputs/full --per_device_train_batch_size 2 --num_train_epochs 1 --max_samples 1000
+	--output_dir weights/full_finetune/checkpoint-1250 --per_device_train_batch_size 2 --num_train_epochs 1 --max_samples 1000
 
-# LoRA
+# LoRA (save into weights/lora/checkpoint-1250 for inference)
 python scripts/train_lora.py --dataset bitext/Bitext-customer-support-llm-chatbot-training-dataset \
-	--output_dir outputs/lora --per_device_train_batch_size 2 --num_train_epochs 1 --max_samples 1000
+	--output_dir weights/lora/checkpoint-1250 --per_device_train_batch_size 2 --num_train_epochs 1 --max_samples 1000
 
-# Prefix Tuning
+# Prefix Tuning (save into weights/prefix/checkpoint-1250 for inference)
 python scripts/train_prefix.py --dataset bitext/Bitext-customer-support-llm-chatbot-training-dataset \
-	--output_dir outputs/prefix --per_device_train_batch_size 2 --num_train_epochs 1 --max_samples 1000
+	--output_dir weights/prefix/checkpoint-1250 --per_device_train_batch_size 2 --num_train_epochs 1 --max_samples 1000
 ```
 
 ## Run Chatbot From Saved Weights
@@ -202,10 +203,3 @@ This installs:
 - [x] Evaluation pipeline complete: `outputs/eval/metrics_summary.csv` and `outputs/eval/predictions.csv` present
 - [x] Weights directory structure: `weights/lora/checkpoint-1250/`, `weights/prefix/checkpoint-1250/`, `weights/full_finetune/checkpoint-1250/` all exist
 - [x] Dependencies: `requirements.txt` with torch, transformers, datasets, peft, evaluate, etc.
-
-## Support
-
-- For questions on the assignment, see the course syllabus or ask in office hours
-- For dataset issues, check [Hugging Face Datasets docs](https://huggingface.co/docs/datasets)
-- For Transformers/PEFT documentation, see [Hugging Face Model Hub](https://huggingface.co/docs/transformers)
-- For HuggingFace Hub cache issues, set `HF_HOME=/path/to/cache` environment variable

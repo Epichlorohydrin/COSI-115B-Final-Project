@@ -68,6 +68,11 @@ def main():
     trainer.train()
     model.push_to_hub = False
     model.save_pretrained(args.output_dir)
+    # Save tokenizer alongside adapter files so loaders can find tokenizer in checkpoint dir
+    try:
+        tokenizer.save_pretrained(args.output_dir)
+    except Exception:
+        pass
 
 
 if __name__ == '__main__':

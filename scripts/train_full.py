@@ -61,6 +61,13 @@ def main():
 
     trainer.train()
     trainer.save_model(args.output_dir)
+    # Also save tokenizer into the same checkpoint directory so inference loaders can
+    # find tokenizer.json / tokenizer_config.json when loading from the checkpoint.
+    try:
+        tokenizer.save_pretrained(args.output_dir)
+    except Exception:
+        # Non-fatal: tokenizer saving should generally succeed; if it fails, keep training output.
+        pass
 
 
 if __name__ == '__main__':

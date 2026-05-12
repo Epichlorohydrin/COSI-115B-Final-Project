@@ -1,86 +1,31 @@
-"""Prepare a hand-evaluation sheet from predictions.csv.
+import os
+import sys
 
-Creates a CSV with empty rating columns so you can score response quality.
-"""
-
-from __future__ import annotations
-
-import argparse
-import csv
-from collections import defaultdict
-from pathlib import Path
-
-
-def read_rows(path: Path):
-    with path.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        return list(reader)
-
-
-def write_rows(path: Path, rows):
-    fieldnames = [
-        "query_id",
-        "query",
-        "reference",
-        "method",
-        "prediction",
-        "overall_1_5",
-        "helpfulness_1_5",
-        "correctness_1_5",
-        "fluency_1_5",
-        "notes",
-    ]
-    with path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+# Ensure the scripts directory is on sys.path when running as a script
+sys.path.insert(0, os.path.dirname(__file__))
+from tfidf_baseline import TFIDFBaseline, load_csv
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--predictions", default="outputs/eval/predictions.csv")
-    parser.add_argument("--output", default="outputs/eval/human_eval_sheet.csv")
-    parser.add_argument("--num-queries", type=int, default=50)
-    parser.add_argument(
-        "--methods",
-        nargs="+",
-        default=["zero_shot", "tfidf", "lora", "prefix"],
-    )
-    args = parser.parse_args()
+    data_path = "sample_data/sample_data.csv"
+    queries, responses = load_csv(data_path)
+    model = TFIDFBaseline()
+    model.fit(queries, responses)
 
-    rows = read_rows(Path(args.predictions))
-    by_method = defaultdict(list)
-    for r in rows:
-        by_method[r["method"]].append(r)
+    # demo queries (some from the data and one unseen)
+    test_queries = [
+        "My internet is down, can you help?",
+        "I forgot my password",
+        "Do you have student discounts?",
+        "The app crashes when I open it"
+    ]
 
-    # Choose query set from zero_shot by default (stable order from file).
-    anchor = by_method.get("zero_shot", [])
-    selected = anchor[: args.num_queries]
-    selected_queries = [r["query"] for r in selected]
-    ref_map = {r["query"]: r["reference"] for r in selected}
-
-    out = []
-    for idx, q in enumerate(selected_queries, start=1):
-        for m in args.methods:
-            pred_row = next((r for r in by_method.get(m, []) if r["query"] == q), None)
-            out.append(
-                {
-                    "query_id": idx,
-                    "query": q,
-                    "reference": ref_map.get(q, ""),
-                    "method": m,
-                    "prediction": "" if pred_row is None else pred_row["prediction"],
-                    "overall_1_5": "",
-                    "helpfulness_1_5": "",
-                    "correctness_1_5": "",
-                    "fluency_1_5": "",
-                    "notes": "",
-                }
-            )
-
-    write_rows(Path(args.output), out)
-    print(f"Wrote {len(out)} rows to {args.output}")
+    for q in test_queries:
+        print('\nQuery:', q)
+        results = model.retrieve(q, top_k=2)
+        for resp, score in results:
+            print(f"  score={score:.4f} => {resp}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

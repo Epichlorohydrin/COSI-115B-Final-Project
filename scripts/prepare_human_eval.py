@@ -1,99 +1,86 @@
-"""Auto-fill overall_1_5 for human-eval sheet using simple heuristics.
+"""Prepare a hand-evaluation sheet from predictions.csv.
 
-This is a first-pass assistant score to reduce manual effort.
-User should still spot-check a subset before submission.
+Creates a CSV with empty rating columns so you can score response quality.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
-import re
+from collections import defaultdict
 from pathlib import Path
 
 
-def norm_tokens(text: str):
-    text = (text or "").lower()
-    text = re.sub(r"[^a-z0-9\s]", " ", text)
-    return [t for t in text.split() if t]
-
-
-def jaccard(a, b):
-    sa, sb = set(a), set(b)
-    if not sa or not sb:
-        return 0.0
-    return len(sa & sb) / len(sa | sb)
-
-
-def score_row(query: str, reference: str, prediction: str) -> int:
-    p = (prediction or "").strip()
-    if not p:
-        return 1
-
-    # Very short / broken text tends to be low quality for this task.
-    if len(p.split()) <= 3:
-        return 1
-
-    qt = norm_tokens(query)
-    rt = norm_tokens(reference)
-    pt = norm_tokens(prediction)
-
-    # Relevance and lexical fit signals.
-    q_sim = jaccard(qt, pt)
-    r_sim = jaccard(rt, pt)
-
-    # Penalize obvious garbage patterns.
-    bad_markers = ["you :", "thanksToSupport", "tosueyourorder", "you'rewith"]
-    if any(m.lower() in p.lower() for m in bad_markers):
-        return 1
-
-    # Generic but coherent fallback text.
-    if q_sim < 0.02 and r_sim < 0.01:
-        return 2
-
-    # Strong lexical overlap usually indicates task-appropriate response.
-    if r_sim >= 0.20:
-        return 5
-    if r_sim >= 0.12:
-        return 4
-    if r_sim >= 0.06 or q_sim >= 0.08:
-        return 3
-
-    return 2
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", default="outputs/eval/human_eval_sheet_20.csv")
-    parser.add_argument("--output", default="outputs/eval/human_eval_sheet_20_prefilled.csv")
-    args = parser.parse_args()
-
-    in_path = Path(args.input)
-    out_path = Path(args.output)
-
-    with in_path.open("r", encoding="utf-8", newline="") as f:
-        rows = list(csv.DictReader(f))
-        fieldnames = f.readline
-
-    # reload header properly
-    with in_path.open("r", encoding="utf-8", newline="") as f:
+def read_rows(path: Path):
+    with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        rows = list(reader)
+        return list(reader)
 
-    for r in rows:
-        s = score_row(r.get("query", ""), r.get("reference", ""), r.get("prediction", ""))
-        r["overall_1_5"] = str(s)
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w", encoding="utf-8", newline="") as f:
+def write_rows(path: Path, rows):
+    fieldnames = [
+        "query_id",
+        "query",
+        "reference",
+        "method",
+        "prediction",
+        "overall_1_5",
+        "helpfulness_1_5",
+        "correctness_1_5",
+        "fluency_1_5",
+        "notes",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"Wrote prefilled sheet: {out_path}")
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--predictions", default="outputs/eval/predictions.csv")
+    parser.add_argument("--output", default="outputs/eval/human_eval_sheet.csv")
+    parser.add_argument("--num-queries", type=int, default=50)
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        default=["zero_shot", "tfidf", "lora", "prefix"],
+    )
+    args = parser.parse_args()
+
+    rows = read_rows(Path(args.predictions))
+    by_method = defaultdict(list)
+    for r in rows:
+        by_method[r["method"]].append(r)
+
+    # Choose query set from zero_shot by default (stable order from file).
+    anchor = by_method.get("zero_shot", [])
+    selected = anchor[: args.num_queries]
+    selected_queries = [r["query"] for r in selected]
+    ref_map = {r["query"]: r["reference"] for r in selected}
+
+    out = []
+    for idx, q in enumerate(selected_queries, start=1):
+        for m in args.methods:
+            pred_row = next((r for r in by_method.get(m, []) if r["query"] == q), None)
+            out.append(
+                {
+                    "query_id": idx,
+                    "query": q,
+                    "reference": ref_map.get(q, ""),
+                    "method": m,
+                    "prediction": "" if pred_row is None else pred_row["prediction"],
+                    "overall_1_5": "",
+                    "helpfulness_1_5": "",
+                    "correctness_1_5": "",
+                    "fluency_1_5": "",
+                    "notes": "",
+                }
+            )
+
+    write_rows(Path(args.output), out)
+    print(f"Wrote {len(out)} rows to {args.output}")
 
 
 if __name__ == "__main__":
     main()
-

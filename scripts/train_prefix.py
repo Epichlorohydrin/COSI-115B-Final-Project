@@ -60,6 +60,11 @@ def main():
 
     trainer.train()
     model.save_pretrained(args.output_dir)
+    # Save tokenizer into the same directory as the prefix adapter outputs
+    try:
+        tokenizer.save_pretrained(args.output_dir)
+    except Exception:
+        pass
 
 
 if __name__ == '__main__':
