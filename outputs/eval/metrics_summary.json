@@ -1,0 +1,42 @@
+[
+  {
+    "method": "zero_shot",
+    "status": "ok",
+    "bleu": 0.0,
+    "rougeL": 0.020382078109476523,
+    "bertscore_f1": null,
+    "notes": ""
+  },
+  {
+    "method": "tfidf",
+    "status": "ok",
+    "bleu": 0.45265342053000207,
+    "rougeL": 0.5172694891099117,
+    "bertscore_f1": null,
+    "notes": ""
+  },
+  {
+    "method": "lora",
+    "status": "ok",
+    "bleu": 0.012046180055208168,
+    "rougeL": 0.1946695008168477,
+    "bertscore_f1": null,
+    "notes": ""
+  },
+  {
+    "method": "prefix",
+    "status": "ok",
+    "bleu": 0.0,
+    "rougeL": 0.0063506202884102865,
+    "bertscore_f1": null,
+    "notes": ""
+  },
+  {
+    "method": "full",
+    "status": "failed_load_or_eval: OSError",
+    "bleu": null,
+    "rougeL": null,
+    "bertscore_f1": null,
+    "notes": "full checkpoint unstable if generation fails with nan/inf"
+  }
+]
