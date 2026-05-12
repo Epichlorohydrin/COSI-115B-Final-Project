@@ -19,6 +19,8 @@ The notebook will:
 - Print parameter counts and efficiency comparisons.
 - Finish in ~30-60 min depending on GPU.
 
+Recommended workflow: use the Colab notebook to train, then download/extract the resulting weights into the matching `weights/full_finetune/checkpoint-1250`, `weights/lora/checkpoint-1250`, and `weights/prefix/checkpoint-1250` folders before running the chatbot or demo scripts.
+
 ## Local Training (Advanced)
 
 For local machines **with GPU**:
